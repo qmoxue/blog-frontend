@@ -24,12 +24,34 @@ src/
 │  ├─ PageCurl.vue       图片右下角折角（纸背 + 折痕投影）
 │  ├─ PostCard.vue       标准卡 / 横版卡 / 文字卡
 │  └─ QuoteBlock.vue     引用块（分割线由中间向两端绘制）
-├─ data/articles.ts      文章、引用、专栏数据
+├─ api/
+│  ├─ client.ts          fetch 封装：统一错误码、超时、带 cookie
+│  ├─ adapters.ts        后端字段 → 组件类型的翻译层（防腐层）
+│  └─ articles.ts        文章 / 专栏 / 归档的业务函数
+├─ data/articles.ts      本地演示数据（接口不可用时的兜底）
 ├─ directives/reveal.ts  v-reveal：进入视口淡入上移 12px
 ├─ types/index.ts        Article / NavItem / Quote / Column / StreamItem
 ├─ assets/fonts/         自托管字体（Gilda Display、Geist）
 └─ style.css             色板、纸张纹理、动效曲线
 ```
+
+## 数据从哪来
+
+首页数据来自后端接口（另一个仓库 `E:/WorkBuddy/techmag-api`），**接口挂了会自动回退到 `data/articles.ts` 里的本地演示数据**，页面永远不会白屏。
+
+请求地址一律写相对路径 `/api/v1/...`，开发时由 Vite 代理转发到 `127.0.0.1:3000`（见 `vite.config.ts`），生产时由 Nginx 反代。**不要写成 `http://localhost:3000`**——那样浏览器会当成跨域请求，cookie 带不过去，登录态永远建立不起来。
+
+`api/adapters.ts` 是唯一知道「后端字段长什么样」的地方。组件只认 `types/index.ts` 里的 `Article`。后端改字段名时只改 adapter，组件一行不用动。
+
+> 想看到真实数据，先启动后端：
+>
+> ```bash
+> cd E:/WorkBuddy/techmag-api
+> npm run seed     # 首次：灌演示数据 + 生成封面图
+> npm run dev      # 端口 3000
+> ```
+>
+> 后端没启动时，浏览器控制台会打印 `[TechMag] 接口不可用，已回退到本地演示数据`，这是预期行为。
 
 ## 几个实现决定
 

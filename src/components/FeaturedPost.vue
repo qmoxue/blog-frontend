@@ -8,6 +8,10 @@ defineProps<{
 }>()
 
 const coverFailed = ref(false)
+// 后端没有作者头像字段，adapter 会传空字符串。
+// 空字符串的 <img> 不会触发 error 事件，只会渲染成一个破图图标，
+// 所以必须显式判断，缺头像时退化成「名字首字」的圆形色块
+const avatarFailed = ref(false)
 </script>
 
 <template>
@@ -23,7 +27,7 @@ const coverFailed = ref(false)
           class="group relative block h-[300px] overflow-hidden rounded-lg bg-[#EFE9DF] sm:h-[380px] lg:h-full lg:min-h-[420px]"
         >
           <img
-            v-if="!coverFailed"
+            v-if="article.cover && !coverFailed"
             :src="article.cover"
             :alt="article.title"
             referrerpolicy="no-referrer"
@@ -95,12 +99,20 @@ const coverFailed = ref(false)
 
         <div class="flex items-center gap-3 border-t border-[#E5E0D8] pt-6">
           <img
+            v-if="article.author.avatar && !avatarFailed"
             :src="article.author.avatar"
             :alt="article.author.name"
             referrerpolicy="no-referrer"
             loading="lazy"
             class="h-9 w-9 rounded-full object-cover"
+            @error="avatarFailed = true"
           />
+          <span
+            v-else
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EFE9DF] text-[13px] text-[#8B5A2B]"
+          >
+            {{ article.author.name.slice(0, 1) }}
+          </span>
           <div class="leading-tight">
             <p class="text-[13.5px] text-[#1A1A1A]">{{ article.author.name }}</p>
             <p class="mt-1 text-[12px] text-[#999999]">{{ article.author.role }}</p>

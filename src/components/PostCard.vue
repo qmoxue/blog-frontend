@@ -7,10 +7,31 @@ const props = defineProps<{
   article: Article
 }>()
 
+/**
+ * 把 id 映射成一个稳定的数字
+ * ------------------------------------------------------------
+ * ⚠️ 这里原来写的是 `id % ratios.length`，只在 id 是数字时成立。
+ *   接后端之后 id 变成 ObjectId 字符串（"6ade09a4..."），
+ *   `'6ade09a4...' % 4` 会得到 NaN，`ratios[NaN]` 是 undefined，
+ *   结果 <img> 拿不到任何 aspect 类 → 高度塌成 0 → 整行图片消失。
+ *
+ *   所以这里把字符串哈希成一个整数。同一个 id 永远得到同一个值，
+ *   裁切比例不会在刷新后跳变。
+ */
+function seedOf(id: string | number): number {
+  if (typeof id === 'number') return id
+
+  let hash = 0
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
 /** 不同裁切比例让同一行的卡片高度自然错落，而不是统一比例 */
-const ratioClass = (id: number): string => {
+const ratioClass = (id: string | number): string => {
   const ratios = ['aspect-[4/3]', 'aspect-[3/2]', 'aspect-[16/10]', 'aspect-[5/4]']
-  return ratios[id % ratios.length]
+  return ratios[seedOf(id) % ratios.length]
 }
 
 const isWide = (): boolean => props.article.type === 'wide'
@@ -52,7 +73,7 @@ const avatarFailed = ref(false)
 
         <div class="mt-auto flex items-center gap-2.5">
           <img
-            v-if="!avatarFailed"
+            v-if="article.author.avatar && !avatarFailed"
             :src="article.author.avatar"
             :alt="article.author.name"
             referrerpolicy="no-referrer"
@@ -73,7 +94,7 @@ const avatarFailed = ref(false)
 
       <div class="relative overflow-hidden bg-[#EFE9DF] md:w-[44%]">
         <img
-          v-if="!coverFailed"
+          v-if="article.cover && !coverFailed"
           :src="article.cover"
           :alt="article.title"
           referrerpolicy="no-referrer"
@@ -86,7 +107,7 @@ const avatarFailed = ref(false)
           <span class="font-display text-[12px] tracking-[0.3em] text-[#8B5A2B]/35">TECHMAG</span>
         </div>
 
-        <PageCurl v-if="!coverFailed" :size="52" />
+        <PageCurl v-if="article.cover && !coverFailed" :size="52" />
       </div>
     </a>
 
@@ -94,7 +115,7 @@ const avatarFailed = ref(false)
     <a v-else-if="article.type === 'standard'" href="#article" class="flex h-full flex-col">
       <div class="relative overflow-hidden bg-[#EFE9DF]">
         <img
-          v-if="!coverFailed"
+          v-if="article.cover && !coverFailed"
           :src="article.cover"
           :alt="article.title"
           referrerpolicy="no-referrer"
@@ -112,7 +133,7 @@ const avatarFailed = ref(false)
           <span class="font-display text-[11px] tracking-[0.3em] text-[#8B5A2B]/35">TECHMAG</span>
         </div>
 
-        <PageCurl v-if="!coverFailed" :size="46" />
+        <PageCurl v-if="article.cover && !coverFailed" :size="46" />
       </div>
 
       <div class="flex flex-1 flex-col p-5">
@@ -139,7 +160,7 @@ const avatarFailed = ref(false)
 
         <div class="mt-auto flex items-center gap-2.5 border-t border-[#E5E0D8]/70 pt-4">
           <img
-            v-if="!avatarFailed"
+            v-if="article.author.avatar && !avatarFailed"
             :src="article.author.avatar"
             :alt="article.author.name"
             referrerpolicy="no-referrer"

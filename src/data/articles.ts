@@ -7,7 +7,7 @@ const avatar = (id: string) =>
   `https://images.unsplash.com/${id}?q=80&w=160&h=160&auto=format&fit=crop&crop=faces`
 
 export const featuredArticle: Article = {
-  id: 0,
+  id: 'm0',
   title: '如何打造有辨识度的前端求职项目',
   category: '前端工程化',
   author: {
@@ -25,7 +25,7 @@ export const featuredArticle: Article = {
 
 export const initialArticles: Article[] = [
   {
-    id: 1,
+    id: 'm1',
     title: 'Vue3 组合式 API 最佳实践',
     category: 'Vue',
     author: {
@@ -40,7 +40,7 @@ export const initialArticles: Article[] = [
     readTime: '6 分钟阅读',
   },
   {
-    id: 2,
+    id: 'm2',
     title: 'CSS 容器查询完全指南',
     category: 'CSS',
     author: {
@@ -53,7 +53,7 @@ export const initialArticles: Article[] = [
     readTime: '5 分钟阅读',
   },
   {
-    id: 3,
+    id: 'm3',
     title: '前端工程化体系搭建思路',
     category: '工程化',
     author: {
@@ -67,7 +67,7 @@ export const initialArticles: Article[] = [
     readTime: '11 分钟阅读',
   },
   {
-    id: 4,
+    id: 'm4',
     title: 'TypeScript 在大型项目中的类型设计',
     category: 'TypeScript',
     author: {
@@ -83,7 +83,7 @@ export const initialArticles: Article[] = [
     readTime: '14 分钟阅读',
   },
   {
-    id: 5,
+    id: 'm5',
     title: '性能优化：从指标到落地',
     category: '性能优化',
     author: {
@@ -98,7 +98,7 @@ export const initialArticles: Article[] = [
     readTime: '9 分钟阅读',
   },
   {
-    id: 6,
+    id: 'm6',
     title: '组件库设计的底层逻辑',
     category: '组件库',
     author: {
@@ -115,7 +115,7 @@ export const initialArticles: Article[] = [
 
 export const moreArticles: Article[] = [
   {
-    id: 7,
+    id: 'm7',
     title: '用 View Transitions 重做页面切换',
     category: '浏览器',
     author: {
@@ -128,7 +128,7 @@ export const moreArticles: Article[] = [
     readTime: '4 分钟阅读',
   },
   {
-    id: 8,
+    id: 'm8',
     title: '从零实现一个可访问性友好的弹层',
     category: '可访问性',
     author: {
@@ -143,7 +143,7 @@ export const moreArticles: Article[] = [
     readTime: '10 分钟阅读',
   },
   {
-    id: 9,
+    id: 'm9',
     title: '构建时预渲染：SSG 的取舍',
     category: '架构',
     author: {

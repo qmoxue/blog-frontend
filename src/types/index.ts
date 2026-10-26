@@ -7,7 +7,13 @@ export interface Author {
 }
 
 export interface Article {
-  id: number
+  /**
+   * 文章 id。
+   * 用 string 而不是 number，因为后端用 MongoDB 的 ObjectId
+   * （形如 "6ade09a4500f78d19b72a7ce"），不是自增数字。
+   * 本地演示数据用 'm1'、'm2' 这种字符串，保持同一类型。
+   */
+  id: string
   title: string
   category: string
   author: Author

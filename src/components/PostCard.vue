@@ -51,7 +51,7 @@ const avatarFailed = ref(false)
     "
   >
     <!-- 横版卡：左文右图，桌面端占两栏 -->
-    <a v-if="isWide()" href="#article" class="flex h-full flex-col-reverse md:flex-row">
+    <RouterLink v-if="isWide()" :to="`/article/${article.id}`" class="flex h-full flex-col-reverse md:flex-row">
       <div class="flex flex-1 flex-col justify-center p-6 sm:p-8">
         <div class="mb-4 flex items-center gap-2.5">
           <span class="text-[10px] uppercase tracking-[0.22em] text-[#8B5A2B]">
@@ -109,10 +109,10 @@ const avatarFailed = ref(false)
 
         <PageCurl v-if="article.cover && !coverFailed" :size="52" />
       </div>
-    </a>
+    </RouterLink>
 
     <!-- 标准卡：上图下文 -->
-    <a v-else-if="article.type === 'standard'" href="#article" class="flex h-full flex-col">
+    <RouterLink v-else-if="article.type === 'standard'" :to="`/article/${article.id}`" class="flex h-full flex-col">
       <div class="relative overflow-hidden bg-[#EFE9DF]">
         <img
           v-if="article.cover && !coverFailed"
@@ -178,10 +178,10 @@ const avatarFailed = ref(false)
           <span class="ml-auto text-[11px] text-[#999999]">{{ article.readTime }}</span>
         </div>
       </div>
-    </a>
+    </RouterLink>
 
     <!-- 文字卡：无图短内容 -->
-    <a v-else href="#article" class="flex h-full min-h-[210px] flex-col p-7 sm:min-h-[280px]">
+    <RouterLink v-else :to="`/article/${article.id}`" class="flex h-full min-h-[210px] flex-col p-7 sm:min-h-[280px]">
       <span class="text-[10px] uppercase tracking-[0.22em] text-[#8B5A2B]">
         {{ article.category }}
       </span>
@@ -196,6 +196,6 @@ const avatarFailed = ref(false)
         <span class="text-[12.5px] text-[#666666]">{{ article.author.name }}</span>
         <span class="text-[11px] text-[#999999]">{{ article.date }}</span>
       </div>
-    </a>
+    </RouterLink>
   </article>
 </template>

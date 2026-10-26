@@ -22,8 +22,8 @@ const avatarFailed = ref(false)
         v-reveal
         class="col-span-12 md:col-span-7"
       >
-        <a
-          href="#article"
+        <RouterLink
+          :to="`/article/${article.id}`"
           class="group relative block h-[300px] overflow-hidden rounded-lg bg-[#EFE9DF] sm:h-[380px] lg:h-full lg:min-h-[420px]"
         >
           <img
@@ -44,7 +44,7 @@ const avatarFailed = ref(false)
           >
             {{ article.category }}
           </span>
-        </a>
+        </RouterLink>
       </div>
 
       <!-- 右：文字 -->
@@ -68,12 +68,12 @@ const avatarFailed = ref(false)
           id="featured-title"
           class="mb-6 text-balance font-display text-[28px] leading-[1.25] text-[#1A1A1A] sm:text-[32px]"
         >
-          <a
-            href="#article"
+          <RouterLink
+            :to="`/article/${article.id}`"
             class="transition-colors duration-300 hover:text-[#8B5A2B]"
           >
             {{ article.title }}
-          </a>
+          </RouterLink>
         </h2>
 
         <!-- 首字下沉：用 first-letter 伪元素，不额外嵌套标签 -->
@@ -83,8 +83,8 @@ const avatarFailed = ref(false)
           {{ article.excerpt }}
         </p>
 
-        <a
-          href="#article"
+        <RouterLink
+          :to="`/article/${article.id}`"
           class="group/link mb-8 inline-flex w-fit items-center gap-1.5 text-[14px] text-[#1A1A1A]"
         >
           <span class="border-b border-transparent pb-0.5 transition-colors duration-300 group-hover/link:border-[#8B5A2B]">
@@ -95,7 +95,7 @@ const avatarFailed = ref(false)
             :stroke-width="1.5"
             class="transition-transform duration-300 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5"
           />
-        </a>
+        </RouterLink>
 
         <div class="flex items-center gap-3 border-t border-[#E5E0D8] pt-6">
           <img

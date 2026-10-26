@@ -1,24 +1,55 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useScroll } from '@vueuse/core'
 import { Menu, Search, X } from 'lucide-vue-next'
-import type { NavItem } from '../types'
 
-const navItems: NavItem[] = [
-  { label: '首页', href: '#blogs', active: true },
-  { label: '专栏', href: '#columns' },
-  { label: '归档', href: '#archive' },
-  { label: '关于', href: '#about' },
+/**
+ * 导航项指向页面内的区块 id
+ * ------------------------------------------------------------
+ * ⚠️ 这里不能再用 `<a href="#archive">`。
+ *   项目用的是 hash 路由，URL 里的 # 已经被路由占用了。
+ *   点 href="#archive" 会把地址变成 #archive，路由匹配不到 → 直接白屏。
+ *   所以改成「点击后滚动到对应区块」。
+ */
+const navItems = [
+  { label: '首页', target: 'blogs' },
+  { label: '专栏', target: 'columns' },
+  { label: '归档', target: 'archive' },
+  { label: '关于', target: 'about' },
 ]
+
+const route = useRoute()
+const router = useRouter()
 
 const { y } = useScroll(window)
 const scrolled = computed(() => y.value > 80)
+
+/** 只有在首页时，「首页」才是高亮状态 */
+const isHome = computed(() => route.path === '/')
 
 const drawerOpen = ref(false)
 
 watch(drawerOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : ''
 })
+
+/**
+ * 滚动到首页的某个区块
+ * 如果当前在文章详情页，要先回首页，等它渲染完再滚
+ */
+async function goTo(target: string) {
+  drawerOpen.value = false
+
+  if (route.path !== '/') {
+    await router.push('/')
+    await nextTick()
+    // 等一帧：首页卡片挂载后高度才确定，否则滚动位置会算错
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+  }
+
+  document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 </script>
 
 <template>
@@ -32,7 +63,12 @@ watch(drawerOpen, (open) => {
   >
     <div class="mx-auto flex h-full max-w-[1280px] items-center justify-between px-5 sm:px-8 lg:px-12">
       <!-- 刊名 -->
-      <a href="#blogs" class="group flex items-baseline gap-2">
+      <button
+        type="button"
+        class="group flex items-baseline gap-2"
+        aria-label="回到首页顶部"
+        @click="goTo('blogs')"
+      >
         <span class="font-display text-[22px] leading-none tracking-tight text-[#1A1A1A]">
           技刊
         </span>
@@ -41,25 +77,28 @@ watch(drawerOpen, (open) => {
         >
           TechMag
         </span>
-      </a>
+      </button>
 
       <!-- 桌面导航 -->
       <nav class="hidden items-center gap-9 md:flex" aria-label="主导航">
-        <a
-          v-for="item in navItems"
+        <button
+          v-for="(item, i) in navItems"
           :key="item.label"
-          :href="item.href"
+          type="button"
           class="group relative py-2 text-[15px] tracking-wide transition-colors duration-300"
           :class="
-            item.active ? 'font-medium text-[#1A1A1A]' : 'font-normal text-[#666666] hover:text-[#1A1A1A]'
+            i === 0 && isHome
+              ? 'font-medium text-[#1A1A1A]'
+              : 'font-normal text-[#666666] hover:text-[#1A1A1A]'
           "
+          @click="goTo(item.target)"
         >
           {{ item.label }}
           <span
             class="absolute bottom-0 left-1/2 h-[2px] w-4 origin-center -translate-x-1/2 bg-[#8B5A2B] transition-transform duration-300"
-            :class="item.active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-150'"
+            :class="i === 0 && isHome ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-150'"
           />
-        </a>
+        </button>
       </nav>
 
       <!-- 功能区 -->
@@ -72,18 +111,18 @@ watch(drawerOpen, (open) => {
           <Search :size="18" :stroke-width="1.6" />
         </button>
 
-        <a
-          href="#login"
+        <RouterLink
+          to="/login"
           class="ml-4 hidden text-[15px] text-[#666666] transition-colors duration-300 hover:text-[#1A1A1A] md:inline"
         >
           登录
-        </a>
-        <a
-          href="#register"
+        </RouterLink>
+        <RouterLink
+          to="/register"
           class="ml-6 hidden text-[15px] font-medium text-[#8B5A2B] transition-colors duration-300 hover:text-[#6B4420] md:inline"
         >
           注册
-        </a>
+        </RouterLink>
 
         <button
           type="button"
@@ -124,24 +163,24 @@ watch(drawerOpen, (open) => {
         </div>
 
         <nav class="mt-10 flex flex-col" aria-label="移动端导航">
-          <a
+          <button
             v-for="(item, i) in navItems"
             :key="item.label"
-            :href="item.href"
-            class="flex items-baseline justify-between border-b border-[#E5E0D8] py-4 font-display text-[22px] text-[#1A1A1A]"
-            @click="drawerOpen = false"
+            type="button"
+            class="flex items-baseline justify-between border-b border-[#E5E0D8] py-4 text-left font-display text-[22px] text-[#1A1A1A]"
+            @click="goTo(item.target)"
           >
             {{ item.label }}
             <span class="text-[10px] tracking-[0.2em] text-[#999999]">
               0{{ i + 1 }}
             </span>
-          </a>
+          </button>
         </nav>
 
         <div class="mt-auto flex items-center gap-6 pt-8 text-[15px]">
-          <a href="#login" class="text-[#666666]">登录</a>
+          <RouterLink to="/login" class="text-[#666666]" @click="drawerOpen = false">登录</RouterLink>
           <span class="h-3 w-px bg-[#E5E0D8]" />
-          <a href="#register" class="font-medium text-[#8B5A2B]">注册</a>
+          <RouterLink to="/register" class="font-medium text-[#8B5A2B]" @click="drawerOpen = false">注册</RouterLink>
         </div>
       </aside>
       </Transition>

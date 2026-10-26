@@ -120,6 +120,23 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
   // 业务成功必须同时满足：HTTP 2xx + code === 0
   if (!res.ok || !body || body.code !== 0) {
+    /**
+     * 5xx 且没有 JSON body = 根本没打到我们的后端
+     * ------------------------------------------------------------
+     * 后端没启动时，响应不是「连接失败」，而是中间层的错误页：
+     *   开发环境 Vite 代理 → 500（HTML 错误页）
+     *   生产环境 Nginx    → 502 / 504
+     * 这两种响应都不是我们的 JSON 格式，body 为 null。
+     *
+     * 如果直接把状态码抛出去，界面上会显示「请求失败（HTTP 500）」——
+     * 用户看不懂，还会以为是网站有 bug。
+     * 所以这里统一翻译成一句人话，并且用 code -1（网络层失败），
+     * 让上层按「服务不可用」处理，而不是当成业务错误。
+     */
+    if (!body && res.status >= 500) {
+      throw new ApiError(-1, '服务暂时不可用，请确认后端已启动后重试', res.status)
+    }
+
     // 失败时 data 的形状是 { details } 或 null，和成功时的 T 不是一回事，
     // 所以这里不能用 body.data 的类型，必须当成 unknown 收窄
     const failureData = (body?.data ?? null) as { details?: Record<string, string> } | null

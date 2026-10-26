@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useScroll } from '@vueuse/core'
 import { Menu, Search, X } from 'lucide-vue-next'
+import { useAuth } from '../stores/auth'
+import { goToHomeSection } from '../utils/scroll'
 
 /**
  * 导航项指向页面内的区块 id
@@ -22,6 +24,21 @@ const navItems = [
 const route = useRoute()
 const router = useRouter()
 
+/**
+ * 登录态
+ * ------------------------------------------------------------
+ * 这里是全局单例 store，所以登录页登录成功后，导航栏会立刻变 —— 不用手动刷新。
+ */
+const auth = useAuth()
+
+/**
+ * 还在探测登录态吗？
+ * 是的话先渲染一个灰条占位。
+ * 不占位的话，首屏会先显示「登录 / 注册」，几百毫秒后又突然变成用户名，
+ * 这个闪动比多等一会儿更难受，而且会让已经登录的用户以为自己被登出了。
+ */
+const authPending = computed(() => auth.state.status === 'idle' || auth.state.status === 'probing')
+
 const { y } = useScroll(window)
 const scrolled = computed(() => y.value > 80)
 
@@ -36,19 +53,21 @@ watch(drawerOpen, (open) => {
 
 /**
  * 滚动到首页的某个区块
- * 如果当前在文章详情页，要先回首页，等它渲染完再滚
+ * 具体逻辑在 utils/scroll.ts —— 页脚和专栏卡片也用同一份
  */
 async function goTo(target: string) {
   drawerOpen.value = false
+  await goToHomeSection(router, route.path, target)
+}
 
-  if (route.path !== '/') {
-    await router.push('/')
-    await nextTick()
-    // 等一帧：首页卡片挂载后高度才确定，否则滚动位置会算错
-    await new Promise((resolve) => requestAnimationFrame(resolve))
-  }
-
-  document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+/**
+ * 登出
+ * signOut 内部无论后端是否确认成功都会清本地状态，
+ * 所以这里不用判断返回值：用户点了退出，界面就必须变成未登录。
+ */
+async function onSignOut() {
+  drawerOpen.value = false
+  await auth.signOut()
 }
 </script>
 
@@ -111,18 +130,50 @@ async function goTo(target: string) {
           <Search :size="18" :stroke-width="1.6" />
         </button>
 
-        <RouterLink
-          to="/login"
-          class="ml-4 hidden text-[15px] text-[#666666] transition-colors duration-300 hover:text-[#1A1A1A] md:inline"
-        >
-          登录
-        </RouterLink>
-        <RouterLink
-          to="/register"
-          class="ml-6 hidden text-[15px] font-medium text-[#8B5A2B] transition-colors duration-300 hover:text-[#6B4420] md:inline"
-        >
-          注册
-        </RouterLink>
+        <!-- 登录态区域：三种形态（探测中 / 已登录 / 未登录）互斥 -->
+        <div class="ml-4 hidden items-center gap-5 md:flex">
+          <!-- 探测中：占位灰条。宁可空着，也不要闪一下错的按钮 -->
+          <span
+            v-if="authPending"
+            class="h-3.5 w-[68px] animate-pulse rounded-full bg-[#E5E0D8]"
+            aria-hidden="true"
+          />
+
+          <template v-else-if="auth.state.user">
+            <span class="flex items-center gap-2">
+              <span
+                class="flex h-7 w-7 items-center justify-center rounded-full bg-[#EFE9DF] text-[12px] leading-none text-[#8B5A2B]"
+              >
+                {{ auth.state.user.name.slice(0, 1) }}
+              </span>
+              <span class="max-w-[7rem] truncate text-[14.5px] text-[#1A1A1A]">
+                {{ auth.state.user.name }}
+              </span>
+            </span>
+            <button
+              type="button"
+              class="text-[14px] text-[#666666] transition-colors duration-300 hover:text-[#1A1A1A]"
+              @click="onSignOut"
+            >
+              登出
+            </button>
+          </template>
+
+          <template v-else>
+            <RouterLink
+              to="/login"
+              class="text-[15px] text-[#666666] transition-colors duration-300 hover:text-[#1A1A1A]"
+            >
+              登录
+            </RouterLink>
+            <RouterLink
+              to="/register"
+              class="text-[15px] font-medium text-[#8B5A2B] transition-colors duration-300 hover:text-[#6B4420]"
+            >
+              注册
+            </RouterLink>
+          </template>
+        </div>
 
         <button
           type="button"
@@ -177,10 +228,30 @@ async function goTo(target: string) {
           </button>
         </nav>
 
-        <div class="mt-auto flex items-center gap-6 pt-8 text-[15px]">
-          <RouterLink to="/login" class="text-[#666666]" @click="drawerOpen = false">登录</RouterLink>
-          <span class="h-3 w-px bg-[#E5E0D8]" />
-          <RouterLink to="/register" class="font-medium text-[#8B5A2B]" @click="drawerOpen = false">注册</RouterLink>
+        <div class="mt-auto flex items-center gap-5 pt-8 text-[15px]">
+          <template v-if="auth.state.user">
+            <span class="flex items-center gap-2 text-[#1A1A1A]">
+              <span
+                class="flex h-8 w-8 items-center justify-center rounded-full bg-[#EFE9DF] text-[13px] leading-none text-[#8B5A2B]"
+              >
+                {{ auth.state.user.name.slice(0, 1) }}
+              </span>
+              <span class="max-w-[8rem] truncate">{{ auth.state.user.name }}</span>
+            </span>
+            <button
+              type="button"
+              class="ml-auto text-[#666666] transition-colors hover:text-[#1A1A1A]"
+              @click="onSignOut"
+            >
+              登出
+            </button>
+          </template>
+
+          <template v-else-if="!authPending">
+            <RouterLink to="/login" class="text-[#666666]" @click="drawerOpen = false">登录</RouterLink>
+            <span class="h-3 w-px bg-[#E5E0D8]" />
+            <RouterLink to="/register" class="font-medium text-[#8B5A2B]" @click="drawerOpen = false">注册</RouterLink>
+          </template>
         </div>
       </aside>
       </Transition>

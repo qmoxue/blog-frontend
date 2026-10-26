@@ -16,7 +16,7 @@
  * 这条边界还有个名字：防腐层（anti-corruption layer）。
  * 听着很学术，其实就是"别让外面的数据模型污染里面的代码"。
  */
-import type { Article, CardType, Column } from '../types'
+import type { Article, AuthUser, CardType, Column, UserRole } from '../types'
 
 // ------------------------------------------------------------------
 // 后端返回的原始结构（DTO = Data Transfer Object）
@@ -148,4 +148,48 @@ export function toColumn(dto: ColumnDto, index = 0): Column {
 
 export function toColumnList(list: ColumnDto[]): Column[] {
   return list.map((dto, i) => toColumn(dto, i))
+}
+
+// ------------------------------------------------------------------
+// 用户
+// ------------------------------------------------------------------
+
+/**
+ * 后端返回的用户
+ * ------------------------------------------------------------
+ * 后端还有 createdAt / updatedAt，前端目前不显示，所以不声明。
+ * 这正是 adapter 的好处：没声明的字段连类型层面都拿不到，
+ * 想用的时候必须来这里加一行 —— 数据流向是显式的。
+ */
+export interface AuthUserDto {
+  id: string
+  username: string
+  email: string
+  role: string
+}
+
+/** 角色 → 中文名。后端存的是英文枚举，界面要中文 */
+const ROLE_LABEL: Record<UserRole, string> = {
+  reader: '读者',
+  author: '作者',
+}
+
+/**
+ * @param dto 后端用户
+ */
+export function toAuthUser(dto: AuthUserDto): AuthUser {
+  // 后端理论上只会给 reader / author，但数据库里的老数据、
+  // 或者以后新增的角色都可能漏过来。这里兜底成 reader，
+  // 而不是让 role 变成 undefined 后在界面上渲染出空白
+  const role: UserRole = dto.role === 'author' ? 'author' : 'reader'
+
+  return {
+    id: dto.id,
+    // username → name：组件不关心后端怎么命名
+    name: dto.username,
+    email: dto.email,
+    role,
+    roleLabel: ROLE_LABEL[role],
+    isAuthor: role === 'author',
+  }
 }

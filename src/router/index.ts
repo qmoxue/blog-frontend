@@ -19,6 +19,34 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import HomePage from '../pages/HomePage.vue'
 
+/**
+ * 登录后跳哪儿的「安全版」
+ * ------------------------------------------------------------
+ * 登录页会接受 ?redirect=/editor 这种参数，登录成功后跳回去。
+ * 但**绝对不能**直接把参数丢给 router.push：
+ *
+ *   ?redirect=https://evil.com   → 用户在我们的域名下登录完，被送去钓鱼站
+ *   ?redirect=//evil.com        → 同上，协议相对地址，浏览器会当成外部域名
+ *
+ * 这类漏洞叫「开放重定向（open redirect）」，是钓鱼的经典手法：
+ * 链接前半段是真实域名，用户不会怀疑。
+ *
+ * 所以只允许站内路径：必须以单个 / 开头。
+ */
+export function safeRedirect(raw: unknown, fallback = '/'): string {
+  if (typeof raw !== 'string') return fallback
+
+  const value = raw.trim()
+  if (!value) return fallback
+
+  // 必须站内绝对路径
+  if (!value.startsWith('/')) return fallback
+  // 排除 //evil.com 和 /\evil.com（后者部分浏览器也会解析成外部地址）
+  if (value.startsWith('//') || value.startsWith('/\\')) return fallback
+
+  return value
+}
+
 export const router = createRouter({
   history: createWebHashHistory(),
 
@@ -40,14 +68,13 @@ export const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('../pages/StubPage.vue'),
-      meta: { title: '登录', note: '账号接口已经就绪（注册 / 登录 / 登出 / 当前用户），登录页在下一步接入。' },
+      // 懒加载：登录页只在点进来时才下载，不占首屏体积
+      component: () => import('../pages/LoginPage.vue'),
     },
     {
       path: '/register',
       name: 'register',
-      component: () => import('../pages/StubPage.vue'),
-      meta: { title: '注册', note: '账号接口已经就绪，注册页在下一步接入。' },
+      component: () => import('../pages/RegisterPage.vue'),
     },
     {
       // 兜底：匹配不到任何路由时

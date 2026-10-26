@@ -42,12 +42,23 @@ export interface Paginated<T> {
 export class ApiError extends Error {
   code: number
   status: number
+  /**
+   * 字段级错误，形如 { username: '用户名至少 2 个字符' }
+   * ------------------------------------------------------------
+   * 后端 zod 校验失败时返回的是：
+   *   { code: 40001, message: '请求参数校验失败', data: { details: { 字段: 提示 } } }
+   * 有了这个字段，注册表单就能把错误直接标在对应输入框下面，
+   * 而不是只在顶部弹一句"请求参数校验失败"让用户自己猜。
+   * 没有字段级信息时是 null。
+   */
+  details: Record<string, string> | null
 
-  constructor(code: number, message: string, status = 0) {
+  constructor(code: number, message: string, status = 0, details: Record<string, string> | null = null) {
     super(message)
     this.name = 'ApiError'
     this.code = code
     this.status = status
+    this.details = details
   }
 }
 
@@ -109,10 +120,15 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
   // 业务成功必须同时满足：HTTP 2xx + code === 0
   if (!res.ok || !body || body.code !== 0) {
+    // 失败时 data 的形状是 { details } 或 null，和成功时的 T 不是一回事，
+    // 所以这里不能用 body.data 的类型，必须当成 unknown 收窄
+    const failureData = (body?.data ?? null) as { details?: Record<string, string> } | null
+
     throw new ApiError(
       body?.code ?? -1,
       body?.message ?? `请求失败（HTTP ${res.status}）`,
       res.status,
+      failureData?.details ?? null,
     )
   }
 

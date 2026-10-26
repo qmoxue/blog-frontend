@@ -14,8 +14,16 @@
 
 ```
 src/
+├─ pages/
+│  ├─ HomePage.vue       首页（刊头 + 精选 + 专栏 + 文章流）
+│  ├─ ArticlePage.vue    文章详情（Markdown 渲染 + 首字下沉）
+│  ├─ LoginPage.vue      登录
+│  ├─ RegisterPage.vue   注册
+│  └─ StubPage.vue       占位页 / 404
+├─ router/index.ts       路由表（hash 模式）+ safeRedirect 开放重定向防护
+├─ stores/auth.ts        登录态单例（reactive，未引入 Pinia）
 ├─ components/
-│  ├─ MagazineNav.vue    页眉式导航（滚动出分割线 + 移动端抽屉）
+│  ├─ MagazineNav.vue    页眉式导航（滚动出分割线 + 移动端抽屉 + 登录态）
 │  ├─ Masthead.vue       刊头（刊号 + 1.8 倍首字 + 右栏描述）
 │  ├─ FeaturedPost.vue   7:5 不对称精选（首字下沉 + 分类标签）
 │  ├─ ColumnStrip.vue    本月专栏（发丝线分栏）
@@ -23,17 +31,38 @@ src/
 │  ├─ SlimeButton.vue    软胶黏块按钮（单路径形变 + 弹簧物理）
 │  ├─ PageCurl.vue       图片右下角折角（纸背 + 折痕投影）
 │  ├─ PostCard.vue       标准卡 / 横版卡 / 文字卡
-│  └─ QuoteBlock.vue     引用块（分割线由中间向两端绘制）
+│  ├─ QuoteBlock.vue     引用块（分割线由中间向两端绘制）
+│  └─ auth/
+│     ├─ AuthShell.vue   登录注册页外壳（左刊头 + 右表单）
+│     └─ AuthField.vue   下划线输入框（错误态 + 密码显隐 + aria 关联）
 ├─ api/
 │  ├─ client.ts          fetch 封装：统一错误码、超时、带 cookie
 │  ├─ adapters.ts        后端字段 → 组件类型的翻译层（防腐层）
-│  └─ articles.ts        文章 / 专栏 / 归档的业务函数
+│  ├─ articles.ts        文章 / 专栏 / 归档的业务函数
+│  └─ auth.ts            注册 / 登录 / 登出 / 当前用户
+├─ utils/
+│  ├─ markdown.ts        markdown-it + DOMPurify（安全边界）
+│  ├─ validators.ts      表单校验规则（后端 zod 规则的镜像）
+│  ├─ formErrors.ts      后端错误 → 表单字段 / 顶部提示
+│  └─ scroll.ts          页内滚动（hash 路由下不能用 href="#xxx"）
 ├─ data/articles.ts      本地演示数据（接口不可用时的兜底）
 ├─ directives/reveal.ts  v-reveal：进入视口淡入上移 12px
-├─ types/index.ts        Article / NavItem / Quote / Column / StreamItem
+├─ types/index.ts        Article / AuthUser / Column / StreamItem …
 ├─ assets/fonts/         自托管字体（Gilda Display、Geist）
 └─ style.css             色板、纸张纹理、动效曲线
 ```
+
+## 登录是怎么判定的
+
+token 存在 **httpOnly cookie** 里，页面 JS **读不到**（`document.cookie` 是空的），这是刻意的：即使文章正文混进恶意脚本，也偷不走凭证。
+
+代价是前端无法自己知道「我登录了吗」，只能问后端：
+
+- 应用启动后调 `GET /auth/me`（`stores/auth.ts` 里的 `initAuth`），**200 就是已登录，401 就是没登录**
+- 这个请求**不阻塞首屏**——放在 `mount` 之后跑，结果回来时导航栏自动从灰条占位变成用户名。后端没起也不会白屏 8 秒
+- 全局只探测一次（模块级 Promise 缓存），不会每个组件挂载都打一次接口
+
+登录/注册成功后**不直接跳转**，而是由「用户状态变成已登录」这个 watch 统一处理跳转。只有一条跳转路径，避免同一个地址 push 两遍。
 
 ## 数据从哪来
 
@@ -60,6 +89,10 @@ src/
 **字体自托管。** 保留 Google Fonts 的 `<link>`，同时把 Gilda Display / Geist 的 woff2 放进 `assets/fonts` 并 `@font-face` 声明，避免外网不可达时整页退回 Times。中文字形不在两个拉丁字体里，`font-display` 与 `font-body` 都补了宋体 / 苹方回退链。
 
 **图片失败降级。** 外链图片加载失败时不留破图，改用纸色占位 + `TECHMAG` 字样；头像降级为姓名首字。
+
+**hash 路由下不能用 `href="#区块"`。** URL 里的 `#` 已经被路由占用了。点 `href="#about"` 会把地址改成 `#about`，路由把这当成「访问 /about」，匹配不到任何页面 → 直接掉进 404 页。所有页内跳转统一走 `utils/scroll.ts`：`scrollToSection` 用于当前页，`goToHomeSection` 会先回首页、`await nextTick()` 再等一帧才滚（首页卡片挂载后高度才确定，少等这一帧滚动位置会偏几百像素）。这个坑在导航栏、页脚、专栏卡片各踩过一次，所以抽成了一个函数。
+
+**表单校验写两份，但文案必须一模一样。** 后端 zod 是唯一权威，前端 `utils/validators.ts` 只是它的镜像，目的仅是省一次网络往返。两边文案不同的话，同一条规则用户会看到两种说法（「用户名太短了」/「用户名至少 2 个字符」），会以为是两个不同的问题。维护约定：改后端规则时必须同步改前端。
 
 **动效只用 opacity / transform。** 入场 0.8s、图片放大 1.03 倍、下划线 `scaleX`，统一 `cubic-bezier(0.22, 0.61, 0.36, 1)`；`prefers-reduced-motion` 下直接显示。
 

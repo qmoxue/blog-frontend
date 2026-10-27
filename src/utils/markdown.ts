@@ -17,7 +17,17 @@
  *      或者某个插件生成了危险属性，这里还会再洗一遍。
  *
  * 顺序不能反：先渲染成 HTML，再清洗 HTML。
- * 反过来（先清洗 Markdown 再渲染）等于没洗 —— 危险内容是在渲染期才产生的。
+ *
+ * 反过来的问题**不是**"一定会被 XSS"——实测这批载荷两种顺序都安全，
+ * 因为 DOMPurify 会把 Markdown 源码当 HTML 解析，顺手也删掉了危险属性。
+ * 真正的问题是两件事：
+ *   1. **会篡改内容**：代码块里的示例被当 HTML 洗了一遍，
+ *      `<img src=x onerror=alert(1)>` 变成 `<img src="x">`、`<a>` 的 href 被删。
+ *      对一个讲 XSS 的技术博客来说，示例失真比报错更糟——它不报错，只是悄悄改内容。
+ *   2. **会漏掉渲染期才产生的内容**：插件、linkify、自定义语法生成的标签，
+ *      在"洗源码"的那一刻还不存在，所以原理上覆盖不到。
+ *
+ * 一句话：清洗的对象必须是「即将进入 DOM 的那个字符串」。
  */
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
@@ -44,10 +54,22 @@ export function renderMarkdown(source: string): string {
 
   return DOMPurify.sanitize(rawHtml, {
     // 允许的标签保持默认白名单即可（p/h1-h6/ul/ol/li/blockquote/pre/code/a/img/table...）
-    // 额外允许 target，方便以后给外链加新窗口打开
+    // 额外允许 target / rel：默认白名单里没有 target，要给外链加"新窗口打开"就得加；
+    // rel 一起加是为了能配 noopener（防 tabnabbing：新页面用 window.opener 把原页面导走）
     ADD_ATTR: ['target', 'rel'],
-    // 禁止 data: 协议的图片和链接。
-    // data:image/svg+xml 里可以带脚本，是个经典绕过点
+    /**
+     * 协议白名单：只放行 http/https/mailto/tel 和相对路径。
+     * ------------------------------------------------------------
+     * 实测它的真实作用：把协议收窄到上面这几种，
+     * 拦掉 DOMPurify 默认放行的 sms: / cid: / ftp:。
+     *
+     * ⚠️ 它**不负责**拦 data: —— 那层由 DOMPurify 内建逻辑管：
+     *    只允许 img/audio/video 等标签使用 data:，且只允许 image/*、audio/*、video/* 媒体类型。
+     *    所以 `data:image/svg+xml` 在 <img src> 上**仍然保留**（实测确认，两种配置都保留）。
+     *
+     *    这不算漏洞：<img> 里的 SVG 是静态图片上下文，按规范不执行脚本。
+     *    真正危险的是把 data: 放进 <a href> 或 <iframe src>，那两个实测都会被删掉。
+     */
     ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
   })
 }

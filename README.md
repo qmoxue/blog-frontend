@@ -17,10 +17,11 @@ src/
 ├─ pages/
 │  ├─ HomePage.vue       首页（刊头 + 精选 + 专栏 + 文章流）
 │  ├─ ArticlePage.vue    文章详情（Markdown 渲染 + 首字下沉）
+│  ├─ EditorPage.vue     作者编辑器（写稿 / 改稿 / 传封面 / 本地草稿）
 │  ├─ LoginPage.vue      登录
 │  ├─ RegisterPage.vue   注册
 │  └─ StubPage.vue       占位页 / 404
-├─ router/index.ts       路由表（hash 模式）+ safeRedirect 开放重定向防护
+├─ router/index.ts       路由表（hash 模式）+ 登录守卫 + safeRedirect 开放重定向防护
 ├─ stores/auth.ts        登录态单例（reactive，未引入 Pinia）
 ├─ components/
 │  ├─ MagazineNav.vue    页眉式导航（滚动出分割线 + 移动端抽屉 + 登录态）
@@ -38,7 +39,7 @@ src/
 ├─ api/
 │  ├─ client.ts          fetch 封装：统一错误码、超时、带 cookie
 │  ├─ adapters.ts        后端字段 → 组件类型的翻译层（防腐层）
-│  ├─ articles.ts        文章 / 专栏 / 归档的业务函数
+│  ├─ articles.ts        文章 / 专栏 / 归档 / 发文 / 上传封面的业务函数
 │  └─ auth.ts            注册 / 登录 / 登出 / 当前用户
 ├─ utils/
 │  ├─ markdown.ts        markdown-it + DOMPurify（安全边界）
@@ -63,6 +64,28 @@ token 存在 **httpOnly cookie** 里，页面 JS **读不到**（`document.cooki
 - 全局只探测一次（模块级 Promise 缓存），不会每个组件挂载都打一次接口
 
 登录/注册成功后**不直接跳转**，而是由「用户状态变成已登录」这个 watch 统一处理跳转。只有一条跳转路径，避免同一个地址 push 两遍。
+
+## 写稿（作者编辑器）
+
+入口：`#/editor`（新建）、`#/editor/:id`（改稿）。登录后的作者在导航栏能看到「写稿」，读者看不到。
+
+**权限分两层，缺一不可：**
+
+| 层 | 位置 | 作用 |
+|---|---|---|
+| 前端 | `router/index.ts` 的 `beforeEach` + `meta.requiresAuth` | 渲染前拦住未登录用户，避免"写完才被告知要登录" |
+| 后端 | `requireAuth` + `requireRole('author')` | 真正的边界。前端判断可以被绕过（改 JS、直接发请求） |
+
+守卫里有两个容易写错的点，都写在注释里了：必须**先等登录态探测完**（否则会把已登录的人踢出去），以及 `offline`（问不到后端）**不能**当成未登录。
+
+**草稿只存在浏览器本地**（`localStorage`），不是云端。原因是后端 `Article` 模型没有 `status` 字段，加一个会牵动列表查询、归档统计、详情页权限三处，属于破坏性改动。本地草稿能覆盖刷新、误关标签页、浏览器崩溃这三种主要场景，代价是换设备就没了——界面文案必须说清这个边界。
+
+**离开保护有两套机制**，因为两种离开走不同代码路径：
+
+- 站内路由跳转 → `onBeforeRouteLeave`，可以自定义确认文案
+- 关闭标签页 / 刷新 → `beforeunload`，浏览器**不允许**自定义文案，只能决定拦不拦
+
+**封面上传**用 `FormData`，字段名必须是 `file`。注意请求封装里**不能**给 `FormData` 设 `Content-Type`——boundary 是浏览器生成的，手写会导致 `Multipart: Boundary not found`。
 
 ## 数据从哪来
 

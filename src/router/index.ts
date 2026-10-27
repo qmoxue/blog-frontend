@@ -18,6 +18,7 @@
  */
 import { createRouter, createWebHashHistory } from 'vue-router'
 import HomePage from '../pages/HomePage.vue'
+import { initAuth, useAuth } from '../stores/auth'
 
 /**
  * 登录后跳哪儿的「安全版」
@@ -77,6 +78,21 @@ export const router = createRouter({
       component: () => import('../pages/RegisterPage.vue'),
     },
     {
+      path: '/editor',
+      name: 'editor-new',
+      // 懒加载：编辑器只有作者会打开，绝不能进首屏包
+      component: () => import('../pages/EditorPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/editor/:id',
+      name: 'editor-edit',
+      component: () => import('../pages/EditorPage.vue'),
+      // 编辑已有文章时 id 作为 prop 传进来
+      props: true,
+      meta: { requiresAuth: true },
+    },
+    {
       // 兜底：匹配不到任何路由时
       path: '/:pathMatch(.*)*',
       name: 'not-found',
@@ -94,4 +110,40 @@ export const router = createRouter({
     if (savedPosition) return savedPosition
     return { top: 0 }
   },
+})
+
+/**
+ * 路由守卫：受保护页面（meta.requiresAuth === true）
+ * ------------------------------------------------------------
+ * 为什么必须有它，不能只靠页面里 catch 401？
+ *   没有守卫时，未登录用户打开 /editor 会先看到完整编辑器界面，
+ *   输入一堆内容点保存，才被告知"请先登录"——内容全丢。
+ *   守卫在**渲染之前**就把人挡在门外。
+ *
+ * 这里有两个容易写错的地方：
+ *
+ * 1. **必须等登录态探测完**
+ *    initAuth() 是在 mount 之后才调的（为了不阻塞首屏）。
+ *    如果用户直接输入 /editor 打开，守卫跑的时候 status 还是 'idle'，
+ *    state.user 是 null —— 直接判断就会把**已登录**的人踢去登录页。
+ *
+ * 2. **offline 不能当成"未登录"**
+ *    后端挂了时问不到登录态。这时踢人去登录页，他会发现登录也登不了，
+ *    只能反复刷新。正确做法是放行，由页面说明情况，保存时后端仍会拦。
+ */
+router.beforeEach(async (to) => {
+  if (to.meta.requiresAuth !== true) return true
+
+  const auth = useAuth()
+
+  if (auth.state.status === 'idle' || auth.state.status === 'probing') {
+    // initAuth 内部有模块级 Promise 缓存，并发调用也只会发一次请求
+    await initAuth()
+  }
+
+  if (auth.state.user) return true
+  if (auth.state.status === 'offline') return true
+
+  // 带上原地址，登录成功后回跳。safeRedirect 会过滤掉外链
+  return { name: 'login', query: { redirect: to.fullPath } }
 })

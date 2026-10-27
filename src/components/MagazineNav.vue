@@ -39,6 +39,19 @@ const auth = useAuth()
  */
 const authPending = computed(() => auth.state.status === 'idle' || auth.state.status === 'probing')
 
+/**
+ * 有发文权限才显示「写稿」入口
+ * ------------------------------------------------------------
+ * ⚠️ 这里必须自己写一个 computed，不能直接用 `auth.canWrite`。
+ *   useAuth() 返回的是普通对象，里面的 canWrite 是个 ref。
+ *   模板只会自动解包「顶层绑定」，`auth.canWrite` 拿到的是 ref 对象本身，
+ *   它永远为真 —— 于是读者也会看到「写稿」按钮，点进去才发现没权限。
+ *
+ * 注意这只是界面开关。真正的权限判断在后端（requireRole('author')），
+ * 前端藏起来只是为了别让用户白跑一趟。
+ */
+const canWrite = computed(() => auth.state.user?.isAuthor === true)
+
 const { y } = useScroll(window)
 const scrolled = computed(() => y.value > 80)
 
@@ -140,6 +153,14 @@ async function onSignOut() {
           />
 
           <template v-else-if="auth.state.user">
+            <!-- 作者专属入口。读者看不到，避免点进去才发现没权限 -->
+            <RouterLink
+              v-if="canWrite"
+              to="/editor"
+              class="text-[14px] text-[#666666] transition-colors duration-300 hover:text-[#8B5A2B]"
+            >
+              写稿
+            </RouterLink>
             <span class="flex items-center gap-2">
               <span
                 class="flex h-7 w-7 items-center justify-center rounded-full bg-[#EFE9DF] text-[12px] leading-none text-[#8B5A2B]"
@@ -226,6 +247,17 @@ async function onSignOut() {
               0{{ i + 1 }}
             </span>
           </button>
+
+          <!-- 作者专属：移动端入口，和桌面端「写稿」是同一个地址 -->
+          <RouterLink
+            v-if="canWrite"
+            to="/editor"
+            class="flex items-baseline justify-between border-b border-[#E5E0D8] py-4 font-display text-[22px] text-[#8B5A2B]"
+            @click="drawerOpen = false"
+          >
+            写稿
+            <span class="text-[10px] tracking-[0.2em] text-[#B4AA9C]">＋</span>
+          </RouterLink>
         </nav>
 
         <div class="mt-auto flex items-center gap-5 pt-8 text-[15px]">

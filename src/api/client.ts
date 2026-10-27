@@ -84,8 +84,19 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const timer = window.setTimeout(() => controller.abort(), TIMEOUT)
 
   const headers = new Headers(init.headers)
-  // 只有带 body 时才声明 JSON，GET 请求加这个头会让预检变复杂
-  if (init.body && !headers.has('Content-Type')) {
+  /**
+   * 只有「带 body 且不是 FormData」时才声明 JSON。
+   *
+   * ⚠️ FormData 绝对不能手动设 Content-Type。
+   *   上传文件时浏览器必须自己写：
+   *     Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryXXX
+   *   那个 boundary 是分隔每个字段的随机字符串，只有浏览器知道。
+   *   我们手写成 application/json，后端收到的就不是 multipart，
+   *   multer 直接报 "Multipart: Boundary not found"。
+   *
+   * GET 请求也不加：多一个头会让跨域预检（OPTIONS）变复杂，没有收益。
+   */
+  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 

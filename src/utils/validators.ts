@@ -86,3 +86,62 @@ export function compactErrors(errors: FieldErrors): FieldErrors {
   }
   return result
 }
+
+// ------------------------------------------------------------------
+// 文章表单（镜像后端 article.validator.js）
+// ------------------------------------------------------------------
+
+/** 文章表单的值。tags 用数组，界面上的"逗号分隔输入框"在页面里转换 */
+export interface ArticleFormValues {
+  title: string
+  content: string
+  excerpt: string
+  tags: string[]
+  year: number
+  issue: number
+}
+
+/**
+ * 封面只允许站内上传路径
+ * ------------------------------------------------------------
+ * 和后端 COVER_PATH 完全一致：禁止 http:// 外链（会被当成图床滥用），
+ * 也禁止 ../ 目录穿越。
+ */
+const COVER_RE = /^\/uploads\/covers\/[a-zA-Z0-9._-]+\.(jpg|jpeg|png|webp)$/
+
+export function validateCoverPath(value: string): string {
+  if (!value) return '' // 封面可选
+  return COVER_RE.test(value) ? '' : '封面必须是上传接口返回的路径'
+}
+
+/**
+ * 校验整张文章表单
+ * @param values 表单值
+ * @returns 字段 → 错误文案；全部通过返回空对象
+ */
+export function validateArticleForm(values: ArticleFormValues): FieldErrors {
+  const errors: FieldErrors = {}
+
+  const title = values.title.trim()
+  if (!title) errors.title = '标题不能为空'
+  else if (title.length < 2) errors.title = '标题至少 2 个字符'
+  else if (title.length > 120) errors.title = '标题最多 120 个字符'
+
+  const content = values.content.trim()
+  if (!content) errors.content = '正文不能为空'
+  else if (content.length > 50000) errors.content = '正文最多 50000 个字符'
+
+  if (values.excerpt.trim().length > 200) errors.excerpt = '摘要最多 200 个字符'
+
+  if (values.tags.length > 5) errors.tags = '标签最多 5 个'
+  else if (values.tags.some((t) => t.length > 20)) errors.tags = '单个标签最多 20 个字符'
+
+  if (!Number.isInteger(values.year) || values.year < 1900 || values.year > 2100) {
+    errors.year = '年份不合理'
+  }
+  if (!Number.isInteger(values.issue) || values.issue < 1 || values.issue > 999) {
+    errors.issue = '期号至少为 1'
+  }
+
+  return compactErrors(errors)
+}

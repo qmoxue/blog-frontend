@@ -3,6 +3,7 @@ dist
 dist-ssr
 .shots
 *.local
+.env
 .DS_Store
 .vscode/*
 !.vscode/extensions.json

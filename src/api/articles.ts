@@ -50,9 +50,18 @@ function toQueryString(query: ArticleQuery): string {
 /**
  * 文章列表（不含正文，只有摘要）
  * GET /api/v1/articles
+ *
+ * @param signal 用于取消。搜索场景里每敲一个字就会发一次请求，
+ *               上一次没回来就被新的顶掉，必须能主动放弃，否则
+ *               慢的那个后回来会覆盖掉快的结果（竞态）。
  */
-export async function getArticles(query: ArticleQuery = {}): Promise<ArticlePage> {
-  const data = await request<Paginated<ArticleDto>>(`/articles${toQueryString(query)}`)
+export async function getArticles(
+  query: ArticleQuery = {},
+  signal?: AbortSignal,
+): Promise<ArticlePage> {
+  const data = await request<Paginated<ArticleDto>>(`/articles${toQueryString(query)}`, {
+    signal,
+  })
 
   return {
     list: toArticleList(data.list),
@@ -221,6 +230,20 @@ export async function updateArticle(id: string, input: Partial<ArticleInput>): P
     body: JSON.stringify(input),
   })
   return data.article
+}
+
+/**
+ * 删除文章
+ * DELETE /api/v1/articles/:id
+ *
+ * 权限在后端卡两道：requireRole('author') + service 里比对 author 字段。
+ * 前端这里只做"显不显示删除按钮"的软判断（isAuthor），
+ * 真正的拦截以后端为准 —— 别人拼 URL 直接发 DELETE 也会被 403 / 404 挡住。
+ *
+ * 返回 void：后端删除成功时 data 为 null，没什么可拿的。
+ */
+export async function deleteArticle(id: string): Promise<void> {
+  await request<void>(`/articles/${id}`, { method: 'DELETE' })
 }
 
 /**

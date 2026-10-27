@@ -135,13 +135,19 @@ async function onSignOut() {
 
       <!-- 功能区 -->
       <div class="flex items-center">
-        <button
-          type="button"
+        <!--
+          ⚠️ 这里原来是个 <button>，带 aria-label="搜索" 但**没有 click 处理**。
+             也就是说：看得见、屏幕阅读器会念"搜索"、点下去什么都不发生。
+             一个"宣称自己能用的死按钮"比干脆没有更糟。
+             现在改成 RouterLink 指向 /search，搜索词由那个页面自己管。
+        -->
+        <RouterLink
+          to="/search"
           aria-label="搜索"
           class="flex h-9 w-9 items-center justify-center rounded-full text-[#666666] transition-colors duration-300 hover:bg-black/5 hover:text-[#1A1A1A]"
         >
           <Search :size="18" :stroke-width="1.6" />
-        </button>
+        </RouterLink>
 
         <!-- 登录态区域：三种形态（探测中 / 已登录 / 未登录）互斥 -->
         <div class="ml-4 hidden items-center gap-5 md:flex">

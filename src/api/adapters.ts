@@ -117,6 +117,9 @@ export function toArticle(dto: ArticleDto, index = 0): Article {
       // PostCard 在 avatar 为空时会退化成「名字首字」的圆形头像
       role: '作者',
       avatar: '',
+      // 后端 author.id 透传过来，前端据此判断「是不是本人文章」
+      // （决定编辑 / 删除入口是否出现）。author 为 null 时给 undefined
+      id: dto.author?.id ?? undefined,
     },
     date: formatDate(dto.publishedAt),
     cover: dto.cover || undefined,

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { ArrowLeft } from 'lucide-vue-next'
-import { getArticleDetail } from '../api/articles'
+import { useRouter } from 'vue-router'
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-vue-next'
+import { getArticleDetail, deleteArticle } from '../api/articles'
 import { renderMarkdown } from '../utils/markdown'
+import { useAuth } from '../stores/auth'
 import type { Article } from '../types'
 
 const props = defineProps<{ id: string }>()
@@ -14,6 +16,56 @@ const loading = ref(true)
 const errorMessage = ref('')
 const coverFailed = ref(false)
 const avatarFailed = ref(false)
+
+// 管理操作相关
+const { state: authState } = useAuth()
+const router = useRouter()
+const deleting = ref(false)
+/**
+ * 删除失败时单独显示的错误，不污染顶层的 errorMessage
+ * （errorMessage 只在「还没加载出文章」的错误态里渲染，
+ *  文章已经显示了再设它不会出现在界面上）。
+ */
+const deleteError = ref('')
+
+/**
+ * 当前登录用户是不是这篇文章的作者
+ * ------------------------------------------------------------
+ * 软判断：只决定编辑 / 删除按钮显不显示。
+ * 真正的权限拦截在后端（requireRole('author') + 比对 author 字段），
+ * 这里漏判顶多是按钮不显示，不会越权。
+ */
+const isAuthor = computed(() => {
+  const me = authState.user
+  return !!me && !!article.value && article.value.author.id === me.id
+})
+
+/**
+ * 删除文章：二次确认 → 调接口 → 成功后回首页
+ * ------------------------------------------------------------
+ * 用 window.confirm 而不是自己写弹窗，原因：
+ *   1. 删除是破坏性操作，浏览器原生确认框能拦住误触；
+ *   2. 这个页面是「阅读页」，为两个按钮专门引入一套弹窗组件不划算，
+ *      等全站都需要的模态框时再统一抽。
+ * 失败不跳转，把错误显示在按钮旁边，让用户能重试。
+ */
+async function handleDelete() {
+  if (!article.value || deleting.value) return
+
+  const ok = window.confirm('确定要删除这篇文章吗？此操作不可恢复。')
+  if (!ok) return
+
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    await deleteArticle(article.value.id)
+    // 删完回首页；用 replace 避免用户点返回又回到一篇已删除的文章
+    router.replace('/')
+  } catch (err) {
+    deleteError.value = err instanceof Error ? err.message : '删除失败，请重试'
+    deleting.value = false
+  }
+}
 
 /**
  * 渲染后的正文 HTML
@@ -143,6 +195,27 @@ watch(
             <p class="text-[13.5px] text-[#1A1A1A]">{{ article.author.name }}</p>
             <p class="mt-1 text-[12px] text-[#999999]">{{ article.author.role }}</p>
           </div>
+        </div>
+
+        <!-- 管理入口：仅作者本人可见 -->
+        <div v-if="isAuthor" class="mt-5 flex flex-wrap items-center gap-4">
+          <RouterLink
+            :to="`/editor/${article.id}`"
+            class="group inline-flex items-center gap-1.5 text-[13px] text-[#8B5A2B] transition-colors duration-300 hover:text-[#6B4420]"
+          >
+            <Pencil :size="14" :stroke-width="1.6" />
+            编辑文章
+          </RouterLink>
+          <button
+            type="button"
+            :disabled="deleting"
+            class="inline-flex items-center gap-1.5 text-[13px] text-[#A6443B] transition-colors duration-300 hover:text-[#7E2F28] disabled:cursor-not-allowed disabled:opacity-50"
+            @click="handleDelete"
+          >
+            <Trash2 :size="14" :stroke-width="1.6" />
+            {{ deleting ? '删除中…' : '删除文章' }}
+          </button>
+          <span v-if="deleteError" class="text-[12.5px] text-[#A6443B]">{{ deleteError }}</span>
         </div>
       </header>
 

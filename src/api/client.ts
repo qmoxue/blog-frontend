@@ -76,14 +76,54 @@ const BASE = '/api/v1'
 const TIMEOUT = 8000
 
 /**
+ * 「调用方主动取消」的业务码
+ * ------------------------------------------------------------
+ * 和 -1（网络层失败）必须分开，因为处理方式完全相反：
+ *   -1  → 用户该看到提示（服务没起、断网、超时）
+ *   -2  → **什么都不能做**，连日志都不该打
+ *
+ * 典型场景：搜索框里连续输入，前一次请求还没回来就被新的顶掉了。
+ * 那次请求的失败是"我们自己不要了"，不是"出错了"。
+ * 如果统一按 -1 处理，用户会看到一闪而过的"网络连接失败"。
+ */
+export const CANCELED_CODE = -2
+
+/**
  * 发一个请求
  * @param path 以 / 开头的路径，如 '/articles?page=1'
+ * @param init 标准 RequestInit，其中 `signal` 用于从外部取消
  */
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), TIMEOUT)
+  /**
+   * 把调用方的 signal 摘出来单独处理，不参与后面的展开。
+   * 如果留在 init 里，会被下面的 `signal: timeoutController.signal` 覆盖掉 ——
+   * 那就是"传了 signal 但完全不生效"，而且不报错，非常难查。
+   */
+  const { signal: externalSignal, ...restInit } = init
 
-  const headers = new Headers(init.headers)
+  const timeoutController = new AbortController()
+  const timer = window.setTimeout(() => timeoutController.abort(), TIMEOUT)
+
+  /**
+   * 两个 signal 合并成一个
+   * ------------------------------------------------------------
+   * 为什么不能只传调用方的 signal？
+   *   那样超时就没人管了，后端卡住时请求会永远挂着。
+   * 为什么不能只传超时的？
+   *   那样外部取消不了，搜索竞态就没法处理。
+   *
+   * 标准做法是 `AbortSignal.any([a, b])`，但它是较新的 API
+   * （Chrome 116+ / Safari 17.4+），这里手写转发，兼容性没有悬念：
+   * 外部一取消，就把内部那个也 abort 掉。
+   */
+  const forwardAbort = () => timeoutController.abort()
+  if (externalSignal) {
+    // 可能传进来的时候就已经取消了（比如上一次的 signal 被复用）
+    if (externalSignal.aborted) timeoutController.abort()
+    else externalSignal.addEventListener('abort', forwardAbort, { once: true })
+  }
+
+  const headers = new Headers(restInit.headers)
   /**
    * 只有「带 body 且不是 FormData」时才声明 JSON。
    *
@@ -96,7 +136,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
    *
    * GET 请求也不加：多一个头会让跨域预检（OPTIONS）变复杂，没有收益。
    */
-  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
+  if (restInit.body && !(restInit.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -106,12 +146,26 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
       // 关键：带上 cookie。后端 token 存在 httpOnly cookie 里，
       // 不加这一行，登录后的请求全都是 401
       credentials: 'include',
-      ...init,
+      ...restInit,
       headers,
-      signal: controller.signal,
+      signal: timeoutController.signal,
     })
   } catch (err) {
-    // 网络层失败：后端没起、断网、超时
+    /**
+     * 先分清「谁取消的」，再决定怎么说
+     * ------------------------------------------------------------
+     * 这两种情况的 err 长得一模一样（都是 DOMException / AbortError），
+     * 只有查 externalSignal.aborted 才能分辨：
+     *   外部取消 → 调用方不要这个结果了，静默返回 -2
+     *   超时     → 用户该知道"等太久了"
+     * 判反了会出现两种怪现象：
+     *   搜索时每敲一个字就闪一次"网络连接失败"；
+     *   或者后端挂了却什么都不提示，一直转圈。
+     */
+    if (externalSignal?.aborted) {
+      throw new ApiError(CANCELED_CODE, '请求已取消')
+    }
+
     const aborted = err instanceof DOMException && err.name === 'AbortError'
     throw new ApiError(
       -1,
@@ -119,6 +173,8 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     )
   } finally {
     window.clearTimeout(timer)
+    // 不管成功失败都要摘掉监听，否则 signal 被复用时旧回调还挂着
+    externalSignal?.removeEventListener('abort', forwardAbort)
   }
 
   // 后端可能返回非 JSON（比如 Nginx 的 502 页面），这里不能假设一定是 JSON

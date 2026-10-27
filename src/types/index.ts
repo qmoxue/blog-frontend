@@ -4,6 +4,15 @@ export interface Author {
   name: string
   role: string
   avatar: string
+  /**
+   * 作者 id（后端 user 的 _id）
+   * ------------------------------------------------------------
+   * 用来判断「当前登录用户是不是这篇文章的作者」，从而决定要不要
+   * 显示「编辑 / 删除」入口。后端本来就有这个字段，只是之前组件
+   * 用不到，所以在 adapter 里没透传。这里补上，且设为可选，
+   * 因为演示数据 / 老接口的 author 可能为 null。
+   */
+  id?: string
 }
 
 export interface Article {

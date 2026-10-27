@@ -58,6 +58,20 @@ export const router = createRouter({
       component: HomePage,
     },
     {
+      path: '/search',
+      name: 'search',
+      // 懒加载：搜索页只有点搜索时才用得上，不进首屏包
+      component: () => import('../pages/SearchPage.vue'),
+      /**
+       * 搜索词放 query（/search?q=vue）而不是路由参数。
+       * 路由参数（/search/vue）会带来两个麻烦：
+       *   1. 空搜索没法表达（/search/ 和 /search 是两条不同的路径）
+       *   2. 关键词里有 / 时要编码，URL 会变得很难看
+       * query 天生可选、天生可省略，正合适。
+       */
+      meta: { title: '检索' },
+    },
+    {
       path: '/article/:id',
       name: 'article',
       // 懒加载：详情页的 Markdown 渲染器不小，首屏用不到就不要打进主包

@@ -91,7 +91,7 @@ token 存在 **httpOnly cookie** 里，页面 JS **读不到**（`document.cooki
 
 首页数据来自后端接口（另一个仓库 `E:/WorkBuddy/techmag-api`），**接口挂了会自动回退到 `data/articles.ts` 里的本地演示数据**，页面永远不会白屏。
 
-请求地址一律写相对路径 `/api/v1/...`，开发时由 Vite 代理转发到 `127.0.0.1:3000`（见 `vite.config.ts`），生产时由 Nginx 反代。**不要写成 `http://localhost:3000`**——那样浏览器会当成跨域请求，cookie 带不过去，登录态永远建立不起来。
+请求地址一律写相对路径 `/api/v1/...`，开发时由 Vite 代理转发到 `127.0.0.1:8080`（端口在 `.env` 的 `VITE_API_PORT` 里配，见 `vite.config.ts`），生产时由 Nginx 反代。**不要写成 `http://localhost:8080`**——那样浏览器会当成跨域请求，cookie 带不过去，登录态永远建立不起来。
 
 `api/adapters.ts` 是唯一知道「后端字段长什么样」的地方。组件只认 `types/index.ts` 里的 `Article`。后端改字段名时只改 adapter，组件一行不用动。
 
@@ -100,7 +100,7 @@ token 存在 **httpOnly cookie** 里，页面 JS **读不到**（`document.cooki
 > ```bash
 > cd E:/WorkBuddy/techmag-api
 > npm run seed     # 首次：灌演示数据 + 生成封面图
-> npm run dev      # 端口 3000
+> npm run dev      # 端口 8080（后端端口，改了要同步 blog2/.env 的 VITE_API_PORT）
 > ```
 >
 > 后端没启动时，浏览器控制台会打印 `[TechMag] 接口不可用，已回退到本地演示数据`，这是预期行为。

@@ -99,7 +99,7 @@ token 存在 **httpOnly cookie** 里，页面 JS **读不到**（`document.cooki
 >
 > ```bash
 > cd E:/WorkBuddy/techmag-api
-> npm run seed     # 首次：灌演示数据 + 生成封面图
+> npm run seed     # 灌演示数据 + 复制真实封面图与作者头像
 > npm run dev      # 端口 8080（后端端口，改了要同步 blog2/.env 的 VITE_API_PORT）
 > ```
 >

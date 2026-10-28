@@ -6,10 +6,12 @@ const img = (id: string, w = 1200) =>
 const avatar = (id: string) =>
   `https://images.unsplash.com/${id}?q=80&w=160&h=160&auto=format&fit=crop&crop=faces`
 
+// 说明：以下演示数据刻意写成"有人味"的杂志稿，而不是"最佳实践 / 完全指南"那种
+// 一眼 AI 的标题。标题具体、有观点、带一点个人语气；摘要给一个能让人点开的细节。
 export const featuredArticle: Article = {
   id: 'm0',
-  title: '如何打造有辨识度的前端求职项目',
-  category: '前端工程化',
+  title: '排版是门慢手艺：我们把正文行宽卡在了 34 个汉字',
+  category: '设计观察',
   author: {
     name: '沈知许',
     role: '前端架构师',
@@ -20,13 +22,13 @@ export const featuredArticle: Article = {
   readTime: '8 分钟阅读',
   type: 'wide',
   excerpt:
-    '面试官在简历上停留的时间大约只有三十秒，能让他们停下来追问的，往往不是技术栈清单，而是项目里那些说不清对错、只能靠判断做出的取舍。这篇文章从选题、结构、叙事三个层面，拆解一个「能讲二十分钟」的前端项目该长成什么样。',
+    '印刷业给单行宽是 45–75 个字符，但中文一个字顶两个英文宽，直接套会偏窄。我们把正文容器锁在 680px，实测阅读速度比 760px 快了一截——读者说不出为什么，眼睛知道。',
 }
 
 export const initialArticles: Article[] = [
   {
     id: 'm1',
-    title: 'Vue3 组合式 API 最佳实践',
+    title: '组合式 API 不是语法糖，是复用单位的迁移',
     category: 'Vue',
     author: {
       name: '苏明远',
@@ -35,13 +37,14 @@ export const initialArticles: Article[] = [
     },
     date: '2025-08-29',
     cover: img('photo-1461749280684-dccba630e2f6'),
-    excerpt: '从逻辑复用、依赖注入到组合函数的边界，一份来自真实项目的经验清单。',
+    excerpt:
+      'mixin 的坑是来源隐式，options 的坑是命名冲突。composable 把"这块逻辑从哪来"写回了调用处——props 进、返回值出，就是契约。',
     type: 'standard',
     readTime: '6 分钟阅读',
   },
   {
     id: 'm2',
-    title: 'CSS 容器查询完全指南',
+    title: '容器查询上线后，我删掉了三套媒体查询',
     category: 'CSS',
     author: {
       name: '周亦辰',
@@ -54,7 +57,7 @@ export const initialArticles: Article[] = [
   },
   {
     id: 'm3',
-    title: '前端工程化体系搭建思路',
+    title: '团队工程化，是从一个 pre-commit 钩子开始的',
     category: '工程化',
     author: {
       name: '陈景川',
@@ -68,7 +71,7 @@ export const initialArticles: Article[] = [
   },
   {
     id: 'm4',
-    title: 'TypeScript 在大型项目中的类型设计',
+    title: '类型系统设计：什么时候该用泛型，什么时候该认怂',
     category: 'TypeScript',
     author: {
       name: '沈知许',
@@ -78,13 +81,13 @@ export const initialArticles: Article[] = [
     date: '2025-08-10',
     cover: img('photo-1555066931-4365d14bab8c'),
     excerpt:
-      '类型不是注释的替代品。当业务规模超过十万行，类型系统承担的是「让错误无法通过编译」的职责，而不是让 IDE 有提示可看。',
+      '给一个嵌套六层的响应建模时，我一度想写二十个 interface。后来发现，前端根本不读的字段，在 adapter 里丢掉的，就别在类型里留着。',
     type: 'wide',
     readTime: '14 分钟阅读',
   },
   {
     id: 'm5',
-    title: '性能优化：从指标到落地',
+    title: 'LCP 从 4.2 秒到 1.1 秒，我们改了五件事',
     category: '性能优化',
     author: {
       name: '吴墨白',
@@ -93,13 +96,14 @@ export const initialArticles: Article[] = [
     },
     date: '2025-07-24',
     cover: img('photo-1551288049-bebda4e38f71'),
-    excerpt: 'LCP 掉到 4 秒之后，我们做了什么，以及哪些事情其实白做了。',
+    excerpt:
+      '字体阻塞占了 1.8 秒，首图 1.2 秒，剩下的才是 JS。最贵的优化不是写代码，是把那张 2MB 的 hero 图换成 60KB 的 webp。',
     type: 'standard',
     readTime: '9 分钟阅读',
   },
   {
     id: 'm6',
-    title: '组件库设计的底层逻辑',
+    title: '组件库的第一次分裂：什么时候该抽象',
     category: '组件库',
     author: {
       name: '江时雨',
@@ -116,7 +120,7 @@ export const initialArticles: Article[] = [
 export const moreArticles: Article[] = [
   {
     id: 'm7',
-    title: '用 View Transitions 重做页面切换',
+    title: 'View Transitions API 实战：页面切换不再闪白',
     category: '浏览器',
     author: {
       name: '顾南乔',
@@ -129,7 +133,7 @@ export const moreArticles: Article[] = [
   },
   {
     id: 'm8',
-    title: '从零实现一个可访问性友好的弹层',
+    title: '一个弹层教会我的三件事：焦点、滚动锁、播报',
     category: '可访问性',
     author: {
       name: '林见鹿',
@@ -138,13 +142,14 @@ export const moreArticles: Article[] = [
     },
     date: '2025-06-19',
     cover: img('photo-1531403009284-440f080d1e12'),
-    excerpt: '焦点管理、滚动锁定与屏幕阅读器播报，三件最容易被跳过的事。',
+    excerpt:
+      'Tab 键能走出弹层的，等于没关。焦点陷阱、背景滚动锁定、给读屏器的 aria-modal——这三件不做，弹层对键盘用户就是 Bug。',
     type: 'standard',
     readTime: '10 分钟阅读',
   },
   {
     id: 'm9',
-    title: '构建时预渲染：SSG 的取舍',
+    title: '我们放弃了 SSR，选了 SSG——以及为什么',
     category: '架构',
     author: {
       name: '白砚清',
@@ -153,7 +158,8 @@ export const moreArticles: Article[] = [
     },
     date: '2025-06-11',
     cover: img('photo-1484417894907-623942c8ee29'),
-    excerpt: '在内容站点上，SSG 常常比 SSR 更划算——前提是你接受它的构建代价。',
+    excerpt:
+      '内容站点的页面在构建时就定死了。SSR 每次请求都重渲染，对一篇一周才改一次的文章是浪费。SSG 把渲染挪到构建期，CDN 直接吐静态页。',
     type: 'wide',
     readTime: '12 分钟阅读',
   },
@@ -162,7 +168,7 @@ export const moreArticles: Article[] = [
 export const quotes: Quote[] = [
   {
     id: 1,
-    text: '好的排版不是装饰，而是让文字找到它应有的呼吸。',
+    text: '好的排版不是装饰，是让文字找到呼吸的节奏。',
     source: '编辑部手记',
   },
   {
@@ -172,7 +178,7 @@ export const quotes: Quote[] = [
   },
   {
     id: 3,
-    text: '性能不是一次优化，而是一种持续的习惯。',
+    text: '性能不是一次优化，是上线后还盯着监控的习惯。',
     source: '吴墨白 · 性能优化',
   },
 ]

@@ -26,6 +26,8 @@ import type { Article, AuthUser, CardType, Column, UserRole } from '../types'
 export interface ArticleAuthorDto {
   id: string
   username: string
+  /** 作者头像（后端 user.avatar）。编辑器上传/种子数据会带，老数据可能为空 */
+  avatar?: string
 }
 
 export interface ArticleColumnDto {
@@ -113,10 +115,10 @@ export function toArticle(dto: ArticleDto, index = 0): Article {
     category: dto.column?.name ?? '未分类',
     author: {
       name: dto.author?.username ?? '佚名',
-      // 后端没有作者简介和头像字段，给占位值。
-      // PostCard 在 avatar 为空时会退化成「名字首字」的圆形头像
+      // 后端 author.avatar 透传过来（编辑部种子账号 / 上传头像的用户会有值），
+      // 为空时 PostCard 退化成「名字首字」的圆形头像
       role: '作者',
-      avatar: '',
+      avatar: dto.author?.avatar ?? '',
       // 后端 author.id 透传过来，前端据此判断「是不是本人文章」
       // （决定编辑 / 删除入口是否出现）。author 为 null 时给 undefined
       id: dto.author?.id ?? undefined,

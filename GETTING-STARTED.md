@@ -21,10 +21,9 @@
 ⚠️ **Node 版本低于 18，前端会直接崩溃**：Vite 6 要求 Node `>=18`。如果终端里是 Node 16，起前端会报
 `crypto$2.getRandomValues is not a function`——因为 Node 16 的 `globalThis.crypto.getRandomValues` 不存在（Node 19+ 才有）。
 - 先查：`node -v`。若是 `v16.x`，必须切到 18 以上。
-- 切换方法（本机已带受管 Node 22）：
-  - **Git Bash / WSL**：`export PATH="/c/Users/shensicheng/.workbuddy-ai/binaries/node/versions/22.22.2-6:$PATH"`
-  - **PowerShell**：`$env:PATH = "C:\Users\shensicheng\.workbuddy-ai\binaries\node\versions\22.22.2-6;" + $env:PATH`
-  - 若装了 nvm：直接 `nvm use`（仓库根目录已放 `.nvmrc`，内容为 `22`）。
+- 切换方法（任选其一）：
+  - 装 **nvm**（macOS / Linux）或 **nvm-windows**，仓库根目录已放 `.nvmrc`（内容 `22`），直接 `nvm use` 即可切到推荐版本。
+  - 或去 [nodejs.org](https://nodejs.org) 下载 18+ 的 LTS 安装包直接覆盖安装。
 - 后端对 Node 版本不挑，16 也能跑；只有**前端**受这条限制。
 
 ---
@@ -118,11 +117,17 @@ npm run dev                # 启动，默认 5173 端口
 
 ```bash
 cd techmag-api
-npm run test:api        # 期望：通过 60 项，失败 0 项
+npm run test:api        # 期望：通过 61 项，失败 0 项
 npm run audit:messages  # 校验所有表单错误文案都是中文（期望 0 处英文）
 ```
 
-前端目前**没有自动化测试**（这是已知短板，见末节）。
+前端有 Vitest 单元测试（覆盖纯函数模块）和 `vue-tsc` 严格类型检查：
+
+```bash
+npm run typecheck      # 类型检查
+npm test               # 单元测试
+npm run build          # 类型检查 + 构建（CI 跑的就是这条）
+```
 
 ---
 
@@ -142,12 +147,12 @@ npm run audit:messages  # 校验所有表单错误文案都是中文（期望 0 
 
 ## 八、项目完成度与已知问题（给想改代码的人）
 
-**完成度**：功能层面已闭环——首页、详情、注册/登录/登出、编辑器、上传、搜索、分页、归档、错误降级全部可用；后端带 60 项接口测试 + 中文文案审计；配套《学习手册》24 章。
+**完成度**：功能层面已闭环——首页、详情、注册/登录/登出、编辑器、上传、搜索、分页、归档、错误降级全部可用；后端带 61 项接口测试 + 中文文案审计，前端有类型检查 + 单元测试 + CI；配套《学习手册》24 章。
 
 **已知待修（不影响运行，但体验上有瑕疵）**：
 
 1. **首页返回丢位置**：在首页翻了几页「加载更多」再点进文章，点浏览器后退会回到顶部——因为首页每次挂载都从第 1 页重新拉数据，没缓存列表进度。（修法：模块级缓存或 `<KeepAlive>`）
-2. **前端无自动化测试**：后端有 60 项、前端 0 项，不对称。三个纯函数模块（`utils/markdown.ts`、`api/adapters.ts`、`composables/useSearch.ts`）最适合先补。
+2. **前端测试覆盖偏薄**：后端有 61 项接口断言，前端只测了几个纯函数模块。`utils/markdown.ts`、`api/adapters.ts`、`composables/useSearch.ts` 三个文件最适合继续扩。
 3. **搜索用正则匹配**：数据量小没问题；量大要换成 MongoDB text index 或 ES + 中文分词（后端 `article.service.js` 注释里已标注这条）。
 
 > 以上都不影响「本地能跑、能演示」，属于锦上添花，按优先级往后排即可。

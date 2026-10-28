@@ -1,9 +1,14 @@
 node_modules
 dist
 dist-ssr
+dist-standalone
 .shots
 *.local
+*.zip
 .env
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# Local editor / tooling working directory (not part of the project source)
+.workbuddy-ai/

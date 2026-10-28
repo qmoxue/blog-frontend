@@ -26,17 +26,51 @@ import type { Article, Column } from '../types'
 /** 每页条数：第一篇做头条，其余进文章流 */
 const PAGE_SIZE = 7
 
-const featured = ref<Article>(mockFeatured)
-const articles = ref<Article[]>([...initialArticles])
-const columns = ref<Column[]>([...mockColumns])
-const hasMore = ref(true)
+/**
+ * 模块级缓存：首页数据在路由跳转之间保留。
+ * 不这么做的话，从文章页「返回」会重新挂载首页并重新拉取，
+ * 重新拉取是异步的，滚动位置恢复时列表还没渲染出来，
+ * 浏览器只能停在顶部 —— 这就是「返回丢滚动位置」的根因。
+ * 缓存后，返回时列表是同步恢复的全量数据，滚动位置能正确还原。
+ * 代价是数据可能稍有延迟（新发布的文章要重新进首页才会刷新），
+ * 对杂志类站点可接受，且换设备/刷新依然是实时数据。
+ */
+interface HomeCache {
+  featured: Article
+  articles: Article[]
+  columns: Column[]
+  hasMore: boolean
+  page: number
+  source: 'mock' | 'api'
+}
+let homeCache: HomeCache | null = null
+
+// 用一个显式类型读取缓存，绕过 TS 对模块级 let 的控制流收窄（否则会被收窄成 null）
+const cached = homeCache as HomeCache | null
+const featured = ref<Article>(cached?.featured ?? mockFeatured)
+const articles = ref<Article[]>(cached ? [...cached.articles] : [...initialArticles])
+const columns = ref<Column[]>(cached ? [...cached.columns] : [...mockColumns])
+const hasMore = ref(cached?.hasMore ?? true)
 const loading = ref(false)
-const page = ref(1)
+const page = ref(cached?.page ?? 1)
 
 /** 当前数据来源，只用于排查问题时打日志，不参与渲染 */
-const source = ref<'mock' | 'api'>('mock')
+const source = ref<'mock' | 'api'>(cached?.source ?? 'mock')
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms))
+
+/** 把当前首页数据写进模块级缓存（只缓存真实接口数据，演示数据不缓存） */
+function persistCache() {
+  if (source.value !== 'api') return
+  homeCache = {
+    featured: featured.value,
+    articles: [...articles.value],
+    columns: [...columns.value],
+    hasMore: hasMore.value,
+    page: page.value,
+    source: source.value,
+  }
+}
 
 /**
  * 首屏：拉第一页文章 + 专栏
@@ -69,15 +103,24 @@ async function loadFirstPage() {
     console.info(
       `[TechMag] 数据来源：${source.value === 'api' ? '后端接口' : '本地演示数据'}，共 ${articlePage.total} 篇`,
     )
+    // 拿到真实数据后写缓存，返回首页就能同步还原、滚动位置不丢
+    persistCache()
   } catch (err) {
     source.value = 'mock'
+    homeCache = null // 接口不可用：清掉缓存，下次挂载重新尝试拉取
     console.warn('[TechMag] 接口不可用，已回退到本地演示数据。后端是否已启动？', err)
   } finally {
     loading.value = false
   }
 }
 
-onMounted(loadFirstPage)
+/**
+ * 只在「还没有缓存」时拉取（首次进入或上次接口失败）。
+ * 有缓存时直接使用模块级数据，避免返回首页时重新请求造成的闪烁与滚动丢失。
+ */
+onMounted(() => {
+  if (!homeCache) loadFirstPage()
+})
 
 /**
  * 加载更多
@@ -97,6 +140,7 @@ async function loadMore() {
       page.value = next
       articles.value = [...articles.value, ...res.list]
       hasMore.value = res.hasMore
+      persistCache() // 追加后同步更新缓存，返回时仍是完整列表
     } else {
       await delay(480)
       articles.value = [...articles.value, ...moreArticles]

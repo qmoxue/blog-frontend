@@ -3,7 +3,8 @@
 > 一个米白纸质质感的杂志风技术博客。用分栏、首字下沉、刊号、通栏引用与错落卡片
 > 还原真实刊物的阅读节奏，而不是套一层卡片网格。
 >
-> 配套后端：[`techmag-api`](https://github.com/qmoxue/techmag-api)
+> 配套后端：[`blog-backend`](https://github.com/qmoxue/blog-backend)
+> 在线演示：[https://qmoxue.github.io/blog-frontend/](https://qmoxue.github.io/blog-frontend/)（仓库启用 GitHub Pages 后生效）
 
 ![首页](docs/screenshots/home.png)
 
@@ -88,7 +89,7 @@
 npm install
 
 # 后端还没起时前端也能跑（会回退到本地演示数据），
-# 想看真实数据请先按 techmag-api 的 README 启动后端并执行 npm run seed
+# 想看真实数据请先按 blog-backend 的 README 启动后端并执行 npm run seed
 cp .env.example .env        # 端口配置在 VITE_API_PORT，默认 8080
 
 npm run dev                 # http://127.0.0.1:5173
@@ -354,7 +355,7 @@ GitHub Actions 会在每次 push / PR 自动跑类型检查、单元测试和构
 
 | 仓库 | 说明 |
 | --- | --- |
-| [`techmag-api`](https://github.com/qmoxue/techmag-api) | 后端：Express + MongoDB，61 项接口验收断言 |
+| [`blog-backend`](https://github.com/qmoxue/blog-backend) | 后端：Express + MongoDB，61 项接口验收断言 |
 | [`techmag-handbook`](https://github.com/qmoxue/techmag-handbook) | 学习手册：24 章源码级拆解，所有结论均来自实测 |
 
 另有一份 [`INTERVIEW-PREP.md`](INTERVIEW-PREP.md)，把项目里的技术难点整理成

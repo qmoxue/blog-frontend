@@ -356,7 +356,7 @@ GitHub Actions 会在每次 push / PR 自动跑类型检查、单元测试和构
 | 仓库 | 说明 |
 | --- | --- |
 | [`blog-backend`](https://github.com/qmoxue/blog-backend) | 后端：Express + MongoDB，61 项接口验收断言 |
-| [`techmag-handbook`](https://github.com/qmoxue/techmag-handbook) | 学习手册：24 章源码级拆解，所有结论均来自实测 |
+| [`blog-handbook`](https://github.com/qmoxue/blog-handbook) | 学习手册：24 章源码级拆解，所有结论均来自实测 |
 
-另有一份 [`INTERVIEW-PREP.md`](INTERVIEW-PREP.md)，把项目里的技术难点整理成
-「难点 → 做法 → 为什么这么选」的问答体，方便复盘。
+另有一份 [`docs/DESIGN-NOTES.md`](docs/DESIGN-NOTES.md)，把项目里做过取舍的地方
+整理成「难点 → 做法 → 为什么这么选 → 代价」，附上已知短板与改法。

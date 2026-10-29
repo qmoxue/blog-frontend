@@ -7,7 +7,7 @@ const avatar = (id: string) =>
   `https://images.unsplash.com/${id}?q=80&w=160&h=160&auto=format&fit=crop&crop=faces`
 
 // 说明：以下演示数据刻意写成"有人味"的杂志稿，而不是"最佳实践 / 完全指南"那种
-// 一眼 AI 的标题。标题具体、有观点、带一点个人语气；摘要给一个能让人点开的细节。
+// 空泛标题。标题具体、有观点、带一点个人语气；摘要给一个能让人点开的细节。
 export const featuredArticle: Article = {
   id: 'm0',
   title: '排版是门慢手艺：我们把正文行宽卡在了 34 个汉字',

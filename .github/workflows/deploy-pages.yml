@@ -12,15 +12,20 @@ permissions:
   id-token: write
 
 # 同一时间只跑一个 Pages 部署
+# 官方模板建议不取消进行中的部署，避免生产部署被中途打断
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # 必须先启用 Pages：站点未创建时 deploy-pages 调 API 会返回 404
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,6 +47,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # deploy 任务需要显式声明这两项权限，与官方模板一致
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
